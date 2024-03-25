@@ -1,0 +1,12 @@
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\bin\Debug\net7.0\HTMLParser.deps.json
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\bin\Debug\net7.0\HTMLParser.dll
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\bin\Debug\net7.0\HTMLParser.pdb
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\obj\Debug\net7.0\HTMLParser.csproj.AssemblyReference.cache
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\obj\Debug\net7.0\HTMLParser.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\obj\Debug\net7.0\HTMLParser.AssemblyInfoInputs.cache
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\obj\Debug\net7.0\HTMLParser.AssemblyInfo.cs
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\obj\Debug\net7.0\HTMLParser.csproj.CoreCompileInputs.cache
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\obj\Debug\net7.0\HTMLParser.dll
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\obj\Debug\net7.0\refint\HTMLParser.dll
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\obj\Debug\net7.0\HTMLParser.pdb
+C:\Users\alpha\source\repos\HTMLParser\HTMLParser\obj\Debug\net7.0\ref\HTMLParser.dll
