@@ -157,10 +157,8 @@ public static class HTMLParserViewer
 
     public static void TraverseAndSaveToFile(this HtmlElement element, string filePath)
     {
-        using (StreamWriter writer = new StreamWriter(filePath))
-        {
-            element.Traverse(0, writer);
-        }
+        using StreamWriter writer = new(filePath);
+        element.Traverse(0, writer);
     }
 
     public static async Task TraverseAsync(this HtmlElement element, int depth, StreamWriter writer)
