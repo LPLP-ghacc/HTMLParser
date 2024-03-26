@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace HTMLParser;
 
@@ -143,5 +144,41 @@ public static class HTMLParserViewer
         {
             Traverse(child, depth + 1);
         }
+    }
+
+    private static void Traverse(this HtmlElement element, int depth, StreamWriter writer)
+    {
+        writer.WriteLine("{0}{1} {2}", new string(' ', depth * 4), element.TagName, element.Attributes.Count > 0 ? $"({string.Join(", ", element.Attributes)})" : "");
+        foreach (var child in element.Children)
+        {
+            Traverse(child, depth + 1, writer);
+        }
+    }
+
+    public static void TraverseAndSaveToFile(this HtmlElement element, string filePath)
+    {
+        using (StreamWriter writer = new StreamWriter(filePath))
+        {
+            element.Traverse(0, writer);
+        }
+    }
+
+    public static async Task TraverseAsync(this HtmlElement element, int depth, StreamWriter writer)
+    {
+        await writer.WriteLineAsync($"{new string(' ', depth * 4)}{element.TagName} {(element.Attributes.Count > 0 ? $"({string.Join(", ", element.Attributes)})" : "")}");
+        foreach (var child in element.Children)
+        {
+            await TraverseAsync(child, depth + 1, writer);
+        }
+    }
+
+    public static async Task TraverseAndSaveToFileAsync(this HtmlElement element, string filePath)
+    {
+        using (StreamWriter writer = new StreamWriter(filePath))
+        {
+            await element.TraverseAsync(0, writer);
+        }
+
+        Console.WriteLine($"the file is saved in this path:{filePath}");
     }
 }
