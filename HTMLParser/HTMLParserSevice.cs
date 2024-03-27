@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -14,7 +16,38 @@ public class HtmlElement
     public Dictionary<string, string> Attributes { get; }
     public List<HtmlElement> Children { get; }
     public HtmlElement Parent { get; }
-
+    public string InnerText
+    {
+        get
+        {
+            var sb = new StringBuilder();
+            foreach (var child in Children)
+            {
+                if (child.TagName.Equals("text", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    sb.Append(child.Attributes["content"]);
+                }
+                else
+                {
+                    sb.Append(child.InnerText);
+                }
+            }
+            return sb.ToString();
+        }
+        set // Assumption: the first child is the text node
+        {
+            if (Children.Count > 0 && Children[0].TagName.Equals("text", StringComparison.OrdinalIgnoreCase))
+            {
+                Children[0].Attributes["content"] = value;
+            }
+            else // No text node exists, add one
+            {
+                var textNode = new HtmlElement("text", new Dictionary<string, string> { { "content", value } }, this);
+                Children.Insert(0, textNode);
+            }
+        }
+    }
+    //pip
     /// <summary>
     /// Initializes a new instance of HtmlElement class.
     /// </summary>
@@ -27,6 +60,24 @@ public class HtmlElement
         Attributes = attributes ?? new Dictionary<string, string>();
         Children = new List<HtmlElement>();
         Parent = parent;
+    }
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.Append($"<{TagName}");
+        foreach (var attribute in Attributes)
+        {
+            sb.Append($" {attribute.Key}=\"{attribute.Value}\"");
+        }
+        sb.Append('>');
+        return sb.ToString();
+    }
+
+    public JsonElement ToJson()
+    {
+        var serializer = new JsonHtmlSerializer();
+        return serializer.Serialize(this);
     }
 
     /// <summary>
@@ -58,6 +109,190 @@ public class HtmlElement
         {
             FindElementsByTag(tagName, child, foundElements);
         }
+    }
+
+    /// <summary>
+    /// Finding Elements By Attribute. Method to find elements that match a given attribute name and value.
+    /// </summary>
+    /// <param name="attributeName"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public IEnumerable<HtmlElement> FindElementsByAttribute(string attributeName, string value = null)
+    {
+        var foundElements = new List<HtmlElement>();
+        FindElementsByAttribute(attributeName, value, this, foundElements);
+        return foundElements;
+    }
+
+    private void FindElementsByAttribute(string attributeName, string value, HtmlElement element, List<HtmlElement> foundElements)
+    {
+        if (element.Attributes.TryGetValue(attributeName, out string foundValue) && (value == null || foundValue == value))
+        {
+            foundElements.Add(element);
+        }
+
+        foreach (HtmlElement child in element.Children)
+        {
+            FindElementsByAttribute(attributeName, value, child, foundElements);
+        }
+    }
+
+    #region GETS METHODS
+    public string GetInnerText()
+    {
+        var stringBuilder = new StringBuilder();
+        GetInnerText(this, stringBuilder);
+        return stringBuilder.ToString();
+    }
+
+    private void GetInnerText(HtmlElement element, StringBuilder stringBuilder)
+    {
+        foreach (HtmlElement child in element.Children)
+        {
+            if (child.TagName.Equals("textnode", StringComparison.OrdinalIgnoreCase))
+            {
+                stringBuilder.Append(child.Attributes["value"]);
+            }
+            else
+            {
+                GetInnerText(child, stringBuilder);
+            }
+        }
+    }
+
+    public IEnumerable<HtmlElement> QuerySelector(string cssSelector)
+    {
+        // Обработка простейшего селектора (например, класса или ID)
+        if (cssSelector.StartsWith("."))
+        {
+            string className = cssSelector.Substring(1);
+            return GetElementsByClassName(className);
+        }
+        if (cssSelector.StartsWith("#"))
+        {
+            string id = cssSelector.Substring(1);
+            return GetElementsById(id);
+        }
+
+        return null;
+    }
+
+    private IEnumerable<HtmlElement> GetElementsByClassName(string className)
+    {
+        var elementsWithClass = new List<HtmlElement>();
+        GetElementsByCondition(this, el =>
+            el.Attributes.TryGetValue("class", out string classAttr) && classAttr.Split(' ').Contains(className),
+            elementsWithClass);
+        return elementsWithClass;
+    }
+
+    private IEnumerable<HtmlElement> GetElementsById(string id)
+    {
+        var elementsWithId = new List<HtmlElement>();
+        GetElementsByCondition(this, el =>
+            el.Attributes.TryGetValue("id", out string idAttr) && idAttr == id,
+            elementsWithId);
+        return elementsWithId;
+    }
+
+    private void GetElementsByCondition(HtmlElement element, Func<HtmlElement, bool> condition, List<HtmlElement> foundElements)
+    {
+        if (condition(element))
+        {
+            foundElements.Add(element);
+        }
+        foreach (HtmlElement child in element.Children)
+        {
+            GetElementsByCondition(child, condition, foundElements);
+        }
+    }
+    #endregion
+
+    public HtmlElement AddChild(string tagName, Dictionary<string, string> attributes = null)
+    {
+        var child = new HtmlElement(tagName, attributes, this);
+        this.Children.Add(child);
+        return child;
+    }
+
+    public void RemoveChild(HtmlElement element)
+    {
+        this.Children.Remove(element);
+    }
+
+    public Dictionary<string, HtmlElement> BuildIdIndex()
+    {
+        var index = new Dictionary<string, HtmlElement>();
+        BuildIdIndex(this, index);
+        return index;
+    }
+
+    private void BuildIdIndex(HtmlElement element, Dictionary<string, HtmlElement> index)
+    {
+        if (element.Attributes.TryGetValue("id", out string id))
+        {
+            index[id] = element;
+        }
+
+        foreach (HtmlElement child in element.Children)
+        {
+            BuildIdIndex(child, index);
+        }
+    }
+
+    public void PrettyPrint(int indentLevel = 0)
+    {
+        string indent = new string(' ', indentLevel * 4);
+        string innerIndent = new string(' ', (indentLevel + 1) * 4);
+
+        Console.WriteLine($"{indent}<{TagName}{HTMLParserViewer.FormatAttributes(Attributes)}>");
+
+        foreach (var child in Children)
+        {
+            if (child.Children.Count == 0)
+            {
+                Console.WriteLine($"{innerIndent}{child.TagName}{HTMLParserViewer.FormatAttributes(child.Attributes)}");
+            }
+            else
+            {
+                child.PrettyPrint(indentLevel + 1);
+            }
+        }
+
+        Console.WriteLine($"{indent}</{TagName}>");
+    }
+}
+
+public class JsonHtmlSerializer
+{
+    // Сериализует HTML-элемент в JSON
+    public JsonElement Serialize(HtmlElement element)
+    {
+        using var jsonDoc = JsonDocument.Parse(SerializeToJsonString(element));
+        return jsonDoc.RootElement.Clone();
+    }
+
+    private string SerializeToJsonString(HtmlElement element)
+    {
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        return JsonSerializer.Serialize(ToDictionary(element), options);
+    }
+
+    // Конвертирует HtmlElement в словарь для последующей сериализации в JSON
+    private Dictionary<string, object> ToDictionary(HtmlElement element)
+    {
+        var dict = new Dictionary<string, object>
+        {
+            ["TagName"] = element.TagName,
+            ["Attributes"] = element.Attributes
+        };
+
+        if (element.Children.Any())
+        {
+            dict["Children"] = element.Children.Select(ToDictionary).ToList();
+        }
+
+        return dict;
     }
 }
 
@@ -178,5 +413,12 @@ public static class HTMLParserViewer
         }
 
         Console.WriteLine($"the file is saved in this path:{filePath}");
+    }
+
+    public static string FormatAttributes(Dictionary<string, string> attributes)
+    {
+        return attributes.Count > 0
+            ? " " + string.Join(" ", attributes.Select(kvp => $"{kvp.Key}=\"{kvp.Value}\""))
+            : string.Empty;
     }
 }
